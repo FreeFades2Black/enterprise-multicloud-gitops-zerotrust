@@ -1,0 +1,9 @@
+apiVersion: v2
+name: enterprise-app
+description: Enterprise Zero-Trust Microservice Suite with Istio mTLS and Canary Routing
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+maintainers:
+  - name: William Free Hall (Free)
+    email: whall4.wh@gmail.com

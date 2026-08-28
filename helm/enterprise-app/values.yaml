@@ -1,0 +1,41 @@
+replicaCount: 3
+
+image:
+  repository: ghcr.io/freefades2black/enterprise-workload
+  pullPolicy: IfNotPresent
+  tag: "v1.0.0"
+
+service:
+  type: ClusterIP
+  port: 8080
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+istio:
+  enabled: true
+  mtlsMode: STRICT
+  canary:
+    enabled: true
+    stableWeight: 90
+    canaryWeight: 10
+
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 75
