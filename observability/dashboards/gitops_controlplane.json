@@ -1,0 +1,95 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "title": "ArgoCD Application Sync Latency (p95 / p99)",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(argocd_app_sync_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p95 Sync Duration (s)"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(argocd_app_sync_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p99 Sync Duration (s)"
+        }
+      ]
+    },
+    {
+      "title": "OPA Gatekeeper Policy Violations / min",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(gatekeeper_violations_total[1m])) by (constraint_name)",
+          "legendFormat": "{{constraint_name}} Violations"
+        }
+      ]
+    },
+    {
+      "title": "Active Dynamic Vault Leases",
+      "type": "stat",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "targets": [
+        {
+          "expr": "vault_core_active_leases",
+          "legendFormat": "Active Token Leases"
+        }
+      ]
+    },
+    {
+      "title": "Istio Cross-Cluster mTLS Handshake Failures",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(istio_requests_total{response_flags=~\"DI|UC\"}[5m]))",
+          "legendFormat": "mTLS Failure Rate"
+        }
+      ]
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": [
+    "gitops",
+    "zerotrust",
+    "argocd",
+    "opa"
+  ],
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "title": "Enterprise GitOps & Zero-Trust Golden Signals"
+}

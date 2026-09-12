@@ -1,0 +1,32 @@
+groups:
+  - name: enterprise_gitops_alerts
+    rules:
+      - alert: ArgoCDApplicationOutOfSync
+        expr: argocd_app_info{sync_status="OutOfSync"} == 1
+        for: 15m
+        labels:
+          severity: warning
+          tier: devsecops
+        annotations:
+          summary: "ArgoCD Application {{ $labels.name }} is OutOfSync"
+          description: "Application {{ $labels.name }} in cluster {{ $labels.dest_server }} has remained out of sync for >15 minutes."
+
+      - alert: GatekeeperRejectionSpike
+        expr: sum(rate(gatekeeper_violations_total[5m])) > 5
+        for: 2m
+        labels:
+          severity: critical
+          tier: security
+        annotations:
+          summary: "Spike in OPA Gatekeeper policy rejections"
+          description: "Over 5 admissions/min failing CIS compliance constraints in target clusters."
+
+      - alert: VaultTokenPoolExhaustion
+        expr: vault_token_count / vault_token_max > 0.85
+        for: 5m
+        labels:
+          severity: critical
+          tier: identity
+        annotations:
+          summary: "HashiCorp Vault dynamic token pool >85% capacity"
+          description: "High rate of token generation detected. Check for orphaned pods leaking token leases."
