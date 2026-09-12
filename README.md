@@ -1,6 +1,6 @@
-# Enterprise Multi-Cloud GitOps & Zero-Trust Infrastructure Pipeline 🛡️
+# Enterprise Multi-Cloud GitOps & Zero-Trust Infrastructure Pipeline
 
-> **Production-grade, automated multi-cloud provisioning and application delivery system spanning AWS (EKS) and GCP (GKE) with GitOps continuous synchronization, HashiCorp Vault dynamic credentials, and Policy-as-Code CIS benchmark enforcement.**
+> Automated multi-cloud provisioning and application delivery system spanning AWS (EKS) and GCP (GKE) with GitOps continuous synchronization, HashiCorp Vault dynamic credentials, and Policy-as-Code CIS benchmark enforcement.
 
 ---
 
@@ -18,19 +18,19 @@
 
 ---
 
-## 🎯 Executive Problem Statement
+## Operational Problem Statement
 
 Enterprise engineering organizations scaling multi-cloud Kubernetes clusters frequently struggle with:
 1. **Configuration Drift & Inconsistent Multi-Cloud Topology:** Disconnected manual deployments across AWS and GCP create fragile, non-reproducible infrastructure.
 2. **Static Credential Exposure:** Long-lived IAM access keys and Kubernetes secrets checked into code or static vaults present critical lateral movement vectors.
-3. **Delivery Bottlenecks & Risky Releases:** Monolithic deployment procedures without automated Canary/Blue-Green traffic migration lead to deployment anxiety and unexpected outages.
+3. **Delivery Bottlenecks & Risky Releases:** Monolithic deployment procedures without automated Canary/Blue-Green traffic migration lead to deployment friction and outages.
 4. **Late-Stage Compliance Failures:** Security and CIS benchmark scanning performed after deployment rather than shifted left as Policy-as-Code gatekeepers in CI/CD.
 
-This project implements a **zero-trust, fully automated GitOps engine** addressing these exact operational challenges.
+This project implements a **zero-trust, automated GitOps engine** addressing these operational challenges.
 
 ---
 
-## 🏛️ System Architecture
+## System Architecture
 
 ```mermaid
 flowchart TD
@@ -61,9 +61,9 @@ flowchart TD
 
 ---
 
-## ⚙️ Key Architectural Engineering Decisions
+## Architectural Engineering Decisions & Trade-offs
 
-| Architectural Decision | Chosen Implementation | Trade-Off & Enterprise Rationale |
+| Architectural Decision | Chosen Implementation | Trade-Off & Rationale |
 | :--- | :--- | :--- |
 | **Multi-Cloud IaC Engine** | **Modular Terraform (AWS + GCP)** | Defined reusable, parameterized modules with remote state locking (S3/DynamoDB) and strict IAM boundary controls to eliminate cloud vendor lock-in. |
 | **Continuous Delivery Engine** | **ArgoCD (Declarative GitOps)** | Pull-based reconciliation model prevents direct cluster access from CI runners, eliminating external attack surfaces against Kubernetes APIs. |
@@ -73,7 +73,42 @@ flowchart TD
 
 ---
 
-## 📁 Repository Directory Structure
+## Verified Test Execution
+
+Automated test suite verifying OPA Rego policy syntax, Helm chart values security contexts, ArgoCD namespace destination configuration, and Terraform multi-cloud provider definitions:
+
+```text
+============================= test session starts =============================
+platform win32 -- Python 3.11.0, pytest-9.1.1, pluggy-1.6.0 -- C:\Python311\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\FreeF\projects\enterprise-multicloud-gitops-zerotrust
+plugins: anyio-4.14.2
+collecting ... collected 4 items
+
+tests/test_policies.py::test_rego_policies_structure PASSED              [ 25%]
+tests/test_policies.py::test_helm_chart_and_values PASSED                [ 50%]
+tests/test_policies.py::test_argocd_manifest PASSED                      [ 75%]
+tests/test_policies.py::test_terraform_structure PASSED                  [100%]
+
+============================== 4 passed in 0.07s ==============================
+```
+
+---
+
+## Zero-Trust & GitOps Operational Edge Cases
+
+### 1. ArgoCD Destination Namespace Provisioning
+When ArgoCD deploys to a target cluster where the destination namespace (`production-workloads`) does not yet exist, default sync cycles fail with `namespaces "production-workloads" not found`. In the GitOps spec, `syncOptions: [CreateNamespace=true]` is explicitly declared alongside `Validate=true` to ensure atomic prerequisite namespace bootstrapping without requiring out-of-band cluster administrative intervention.
+
+### 2. OPA Policy Pre-Evaluation vs Rendered Manifests
+Evaluating raw Helm templates directly with Conftest can yield false violations because Helm template interpolation expressions (e.g. `{{ .Values.securityContext.runAsNonRoot }}`) are not valid YAML. CI pipelines render the templates via `helm template` first into temporary manifests, ensuring Conftest and OPA evaluate real Kubernetes AST definitions.
+
+### 3. Dynamic Vault Secret Token Leases & Mesh Connection Pools
+When pods authenticate to HashiCorp Vault via Kubernetes ServiceAccount tokens (JWTs), Vault issues dynamic database credentials with 1-hour leases. If an application maintains long-lived TCP connection pools (e.g. SQLAlchemy or HikariCP), existing connections outlive the credential expiration without error, but new scale-out pods fail to connect if token renewal background tasks crash. The deployment manifests include Vault Agent sidecars with automated SIGHUP reloads on lease expiration.
+
+---
+
+## Repository Directory Structure
 
 ```text
 enterprise-multicloud-gitops-zerotrust/
@@ -85,6 +120,7 @@ enterprise-multicloud-gitops-zerotrust/
 │   │   ├── aws_eks/                # Hardened AWS EKS cluster module
 │   │   ├── gcp_gke/                # GCP GKE cluster with Workload Identity
 │   │   └── vault/                  # HashiCorp Vault server & secret backend
+│   ├── variables.tf                # Input variables
 │   └── main.tf                     # Root coordinator module
 ├── helm/                           # Parameterized Helm 3 Application Charts
 │   └── enterprise-app/
@@ -97,14 +133,16 @@ enterprise-multicloud-gitops-zerotrust/
 ├── policy/                         # Policy-as-Code Rules (OPA / Conftest)
 │   ├── cis_kubernetes.rego         # CIS Kubernetes Benchmark compliance rules
 │   └── cis_terraform.rego          # CIS Cloud Infrastructure compliance rules
+├── tests/                          # Policy & Manifest validation test suite
+│   └── test_policies.py
 ├── .github/workflows/              # Automated DevSecOps CI/CD Matrix
 │   └── pipeline.yml                # Lint, Trivy Scan, OPA Conftest, and GitOps push
-└── Makefile                        # One-command developer automation interface
+└── Makefile                        # Developer automation interface
 ```
 
 ---
 
-## 🔒 Security & Reliability Controls
+## Security & Reliability Controls
 
 1. **Zero-Trust Cryptographic Identity:** Every inter-service HTTP/gRPC request requires strict mutual TLS verification (`mTLS: STRICT`) managed by Istio sidecars.
 2. **Least-Privilege Cloud IAM:** Node groups execute with minimal IAM permissions via AWS IAM Roles for Service Accounts (IRSA) and GCP Workload Identity.
@@ -113,20 +151,22 @@ enterprise-multicloud-gitops-zerotrust/
 
 ---
 
-## 🚀 Quickstart: One-Command Deployment
+## Quickstart: Deployment & Verification
 
 ### 1. Prerequisites
 * Terraform `>= 1.8.0`
 * `kubectl` `>= 1.29`
 * `helm` `>= 3.14`
-* `conftest` & `trivy`
+* `python` `>= 3.10`
 
-### 2. Validate Policy-as-Code & Infrastructure
+### 2. Validate Policy-as-Code & Manifests
 ```bash
-# Validate Terraform & Scan for CIS Benchmark Compliance
+# Run pytest test suite
+pytest tests/ -v
+
+# Run Makefile linters
 make lint
 make policy-test
-make security-scan
 ```
 
 ### 3. Deploy Multi-Cloud Cluster & GitOps
@@ -142,7 +182,7 @@ make gitops-bootstrap
 
 ---
 
-## 📜 Author & Contact
+## Author & Contact
 
 **William Free Hall (Free)**  
 *Principal Cloud & AI Architect • DevSecOps Lead*  
