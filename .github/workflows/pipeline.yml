@@ -15,12 +15,13 @@ jobs:
   validate-and-gate:
     name: Code Quality, Policy & Vulnerability Gate
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Python 3.11
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: '3.11'
           cache: 'pip'
@@ -35,7 +36,7 @@ jobs:
           pytest tests/ -v --junitxml=test-results.xml
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+        uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: 1.8.0
 
@@ -47,7 +48,7 @@ jobs:
           terraform validate
 
       - name: Setup Helm
-        uses: azure/setup-helm@v4
+        uses: azure/setup-helm@v5
         with:
           version: v3.14.0
 
@@ -56,7 +57,7 @@ jobs:
           helm lint helm/enterprise-app
 
       - name: Security Vulnerability Scan (Trivy IaC)
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@v0
         with:
           scan-type: 'config'
           format: 'sarif'
